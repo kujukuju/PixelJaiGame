@@ -1,11 +1,12 @@
 #import "Basic";
 #import "raylib";
 
+PLAYER: Player = ---;
+LEVEL: Level = ---;
+
 main :: () {
     screenWidth :: 1600;
     screenHeight :: 900;
-
-    print("going % %", screenWidth, screenHeight);
     
     InitWindow(screenWidth, screenHeight, "Jai Pixel Game");
     defer CloseWindow();
@@ -14,30 +15,31 @@ main :: () {
     
     SetTargetFPS(60);
 
-    background: Texture2D = LoadTexture("assets/background.png");
-    foreground: Texture2D = LoadTexture("assets/foreground.png");
-    girlSheet: Texture2D = LoadTexture("assets/girl-sheet.gif");
-    girlSprite: AnimatedSprite = CreateAnimatedSprite(girlSheet, 79, 48, 8, 135, .{0.5, 1}, .{2, 2});
+    LEVEL.background = LoadTexture("assets/background.png");
+    LEVEL.foreground = LoadTexture("assets/foreground.png");
+    LEVEL.image = GetTextureData(LEVEL.foreground);
 
-    frame := 0;
+    PLAYER.sprite = CreateAnimatedSprite(LoadTexture("assets/girl-sheet.gif"), 79, 48, 8, 135, .{0.5, 1}, .{2, 2});
+    PLAYER.position = .{500, 450};
+    PLAYER.velocity = .{0, 0};
 
     while !WindowShouldClose() {
-        {
-            BeginDrawing();
-            defer EndDrawing();
-
-            ClearBackground(BLANK);
-
-            DrawTexture(background, 0, 0, WHITE);
-            DrawTexture(foreground, 0, 0, WHITE);
-
-            frame = (frame + 1) % girlSprite.frameCount;
-            if (frame > girlSprite.frameCount / 2) {
-                girlSprite.scale.x = -abs(girlSprite.scale.x);
-            } else {
-                girlSprite.scale.x = abs(girlSprite.scale.x);
-            }
-            DrawSprite(girlSprite, .{500, 500}, frame, WHITE);
-        }
+        update();
+        render();
     }
+}
+
+update :: () {
+    update(*PLAYER);
+}
+
+render :: () {
+    BeginDrawing();
+    defer EndDrawing();
+
+    ClearBackground(BLANK);
+
+    render(LEVEL);
+
+    render(PLAYER);
 }
