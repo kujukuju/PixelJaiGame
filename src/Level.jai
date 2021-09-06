@@ -9,24 +9,16 @@ render :: (level: Level) {
     DrawTexture(level.foreground, 0, 0, WHITE);
 }
 
-get_pixel_view :: (level: Level, aabb: AABB2) -> PixelView {
+get_pixel_view :: (level: Level, aabb: AABB2i) -> PixelView {
     image := level.image;
 
-    lower: [2] int = ---;
-    lower[0] = cast(int) aabb.lower.x;
-    lower[1] = cast(int) aabb.lower.y;
-
-    upper: [2] int = ---;
-    upper[0] = cast(int) aabb.upper.x;
-    upper[1] = cast(int) aabb.upper.y;
-
-    width := upper[0] - lower[0];
-    height := upper[1] - lower[1];
+    width := aabb.upper.x - aabb.lower.x;
+    height := aabb.upper.y - aabb.lower.y;
 
     view: PixelView = ---;
     view.image = image;
-    view.x = lower[0];
-    view.y = lower[1];
+    view.x = aabb.lower.x;
+    view.y = aabb.lower.y;
     view.width = width;
     view.height = height;
 
