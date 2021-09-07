@@ -1,8 +1,8 @@
 #import "Basic";
 #import "raylib";
 
-PLAYER: Player = ---;
-LEVEL: Level = ---;
+PLAYER: Player;
+LEVEL: Level;
 
 main :: () {
     screenWidth :: 1600;

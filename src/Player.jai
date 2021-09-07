@@ -6,35 +6,40 @@ Player :: struct {
     sprite: AnimatedSprite;
     position: Vector2;
     velocity: Vector2;
+    jumping: bool;
 }
 
 update :: (player: *Player) {
+    player.velocity.x = 0;
+
     accel := Vector2.{0, 0};
-    if IsKeyDown(.KEY_W) {
-        accel.y -= 1;
-    }
     if IsKeyDown(.KEY_A) {
-        accel.x -= 1;
-    }
-    if IsKeyDown(.KEY_S) {
-        accel.y += 1;
+        accel.x -= 10;
     }
     if IsKeyDown(.KEY_D) {
-        accel.x += 1;
+        accel.x += 10;
     }
-    accel = unit_vector(accel);
+
+    if IsKeyDown(.KEY_W) && !player.jumping {
+        player.jumping = true;
+        accel.y -= 12;
+    }
 
     // gravity
-    accel.y += 0.1;
+    accel.y += 0.5;
 
     player.velocity += accel;
 
     old_position := player.position;
     new_position := player.position + player.velocity;
 
-    position, velocity := resolve_physics(old_position, new_position, player.sprite.width, player.sprite.height, player.sprite.anchor);
+    position, velocity := resolve_physics(old_position, new_position, player.sprite.width / 2, player.sprite.height, player.sprite.anchor);
     player.position = position;
     player.velocity = velocity;
+
+    if position.y < new_position.y {
+        player.jumping = false;
+    }
 
     player.sprite.frame = (player.sprite.frame + 1) % player.sprite.frameCount;
 }
@@ -75,73 +80,68 @@ resolve_physics :: (start: AABB2i, end: AABB2i) -> position: Vector2i, velocity:
     pixels: [..] Vector2i = get_pixels(line);
     defer array_free(pixels);
 
+    // make pixels relative
+    for *pixel: pixels {
+        <<pixel = <<pixel - start.lower;
+    }
+
     dimensions := start.upper - start.lower;
 
+    offset := Vector2i.{0, 0};
     position := start.lower;
     for pixel: pixels {
         aabb: AABB2i = ---;
-        aabb.lower = pixel;
-        aabb.upper = pixel + dimensions;
+        aabb.lower = pixel + start.lower + offset;
+        aabb.upper = pixel + start.lower + offset + dimensions;
 
         if check_collisions(aabb) {
-            break;
+            step_offset := step_up(aabb);
+            if step_offset == .{0, 0} {
+                break;
+            }
+
+            offset = offset + step_offset;
+            aabb.lower = aabb.lower + step_offset;
+            aabb.upper = aabb.upper + step_offset;
         }
 
-        position = pixel;
+        position = aabb.lower;
     }
 
     velocity := position - start.lower;
     return position, velocity;
 }
 
-/*
-resolve_physics :: (start: Vector2, end: Vector2, width: int, height: int, anchor: Vector2) -> position: Vector2, velocity: Vector2 {
-    top_left_offset := roundi(xy(-width * anchor.x, -height * anchor.y));
-
-    line: Line2i = ---;
-    line.p1 = roundi(start) + top_left_offset;
-    line.p2 = roundi(end) + top_left_offset;
-
-    start_offset := start - round(start);
-    end_offset := end - round(end);
-
-    pixels: [..] Vector2i = get_pixels(line);
-    defer array_free(pixels);
-
-    position := start;
-    // start at 1 so we dont get divide by 0 later
-    for i: 1..pixels.count - 1 {
-        pixel := pixels[i];
-
-        aabb: AABB2i = ---;
-        aabb.lower = pixel;
-        aabb.upper = pixel + xy(width, height);
-
-        if check_collisions(aabb) {
-            break;
-        }
-
-        progress := cast(float) i / (pixels.count - 1);
-        position = pixel - top_left_offset + start_offset + (end_offset - start_offset) * progress;
-    }
-
-    velocity := position - start;
-    return position, velocity;
-}
-*/
-
 check_collisions :: (aabb: AABB2i) -> bool {
-    view: PixelView = get_pixel_view(LEVEL, aabb);
+    view: ImageView = CreateImageView(LEVEL.image, aabb.lower.x, aabb.lower.y, aabb.upper.x - aabb.lower.x, aabb.upper.y - aabb.lower.y);
 
     for x: 0..view.width - 1 {
         for y: 0..view.height - 1 {
-            if get_pixel(view, x, y).a != 0 {
-                set_pixel(view, BLANK, x, y);
+            if GetPixel(view, x, y).a != 0 {
+                return true;
+                // set_pixel(view, BLANK, x, y);
             }
         }
     }
 
-    update_texture(LEVEL.foreground, view);
+    // update_texture(LEVEL.foreground, view);
 
     return false;
+}
+
+// tries to step up from your current position, returns the necessary offset
+step_up :: (aabb: AABB2i) -> Vector2i {
+    STEP_HEIGHT :: 8;
+
+    for y: 0..STEP_HEIGHT {
+        new_aabb: AABB2i = ---;
+        new_aabb.lower = aabb.lower - xy(0, y);
+        new_aabb.upper = aabb.upper - xy(0, y);
+
+        if !check_collisions(new_aabb) {
+            return xy(0, -y);
+        }
+    }
+
+    return Vector2i.{0, 0};
 }
