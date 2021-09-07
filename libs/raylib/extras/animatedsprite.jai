@@ -38,10 +38,18 @@ DrawSprite :: (sprite: AnimatedSprite, position: Vector2) {
     rect.width = cast(float) sprite.width * scaleSignX;
     rect.height = cast(float) sprite.height * scaleSignY;
 
+    anchor := sprite.anchor;
+    if scaleSignX == -1 {
+        anchor.x = 1.0 - anchor.x;
+    }
+    if scaleSignY == -1 {
+        anchor.y = 1.0 - anchor.y;
+    }
+
     // for some reason negative width doesnt work in the destination, only the source
     dest: Rectangle = ---;
-    dest.x = position.x - sprite.anchor.x * sprite.width * abs(sprite.scale.x);
-    dest.y = position.y - sprite.anchor.y * sprite.height * abs(sprite.scale.y);
+    dest.x = position.x - anchor.x * sprite.width * abs(sprite.scale.x);
+    dest.y = position.y - anchor.y * sprite.height * abs(sprite.scale.y);
     dest.width = sprite.width * abs(sprite.scale.x);
     dest.height = sprite.height * abs(sprite.scale.y);
 
